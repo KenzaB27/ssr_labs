@@ -3,7 +3,8 @@ import numpy as np
 
 import scipy.signal as signal
 import scipy.fftpack as fftpack
-from lab1_tools import lifter
+from lab1_tools import lifter, trfbank
+import matplotlib.pyplot as plt
 # Function given by the exercise ----------------------------------
 
 def mspec(samples, winlen = 400, winshift = 200, preempcoeff=0.97, nfft=512, samplingrate=20000):
@@ -126,6 +127,12 @@ def powerSpectrum(input, nfft):
     Note: you can use the function fft from scipy.fftpack
     """
 
+    _fft = fftpack.fft(input,nfft)
+    modulus = abs(_fft)
+    mod_squared = modulus ** 2
+    
+    return mod_squared
+
 def logMelSpectrum(input, samplingrate):
     """
     Calculates the log output of a Mel filterbank when the input is the power spectrum
@@ -140,6 +147,17 @@ def logMelSpectrum(input, samplingrate):
     Note: use the trfbank function provided in lab1_tools.py to calculate the filterbank shapes and
           nmelfilters
     """
+
+    N, nfft = input.shape  # 92frames
+    Mel = trfbank(samplingrate, nfft)  # 40filters*512
+    M = Mel.shape[0]
+
+    logMelSpec = np.zeros((N, M))
+    for i in range(N):
+        for j in range(M):
+            logMelSpec[i, j] = np.log(np.sum(input[i]*Mel[j]))
+
+    return logMelSpec
 
 def cepstrum(input, nceps):
     """
