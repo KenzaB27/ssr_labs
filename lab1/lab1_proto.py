@@ -104,6 +104,15 @@ def windowing(input):
     if you want to get the same results as in the example)
     """
 
+    N, M = input.shape
+    windowed_samples = np.zeros((N, M))
+    window = signal.hamming(M, sym=False)
+
+    for i in range(N):
+        windowed_samples[i] = input[i] * window
+
+    return windowed_samples
+
 def powerSpectrum(input, nfft):
     """
     Calculates the power spectrum of the input signal, that is the square of the modulus of the FFT
