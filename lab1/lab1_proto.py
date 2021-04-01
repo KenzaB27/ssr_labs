@@ -1,5 +1,9 @@
 # DT2119, Lab 1 Feature Extraction
 import numpy as np
+
+import scipy.signal as signal
+import scipy.fftpack as fftpack
+from lab1_tools import lifter
 # Function given by the exercise ----------------------------------
 
 def mspec(samples, winlen = 400, winshift = 200, preempcoeff=0.97, nfft=512, samplingrate=20000):
@@ -57,12 +61,12 @@ def enframe(samples, winlen, winshift):
     """
     n = samples.shape[0]
 
-    y = n // winlen * 2 - 1
-    windows = np.zeros((y, winlen))
-    for i in range(y):
-        windows[i, :] = samples[i*winshift:i*winshift+winlen]
+    slices = n // winlen * 2 - 1
+    frames = np.zeros((slices, winlen))
+    for i in range(slices):
+        frames[i] = samples[i*winshift:i*winshift+winlen]
 
-    return windows
+    return frames
     
 def preemp(input, p=0.97):
     """
@@ -77,7 +81,16 @@ def preemp(input, p=0.97):
         output: array of pre-emphasised speech samples
     Note (you can use the function lfilter from scipy.signal)
     """
+    a = 1
+    b = np.array([1, -p])
+    N, M = input.shape
 
+    pre_emp = np.zeros((N, M))
+    for i in range(N):
+        pre_emp[i] = signal.lfilter(b, a, input[i])
+
+    return pre_emp
+    
 def windowing(input):
     """
     Applies hamming window to the input frames.
