@@ -193,3 +193,43 @@ def dtw(x, y, dist):
 
     Note that you only need to define the first output for this exercise.
     """
+    N, M = x.shape[0], y.shape[0]
+    LD = np.zeros((N, M))
+    AD = np.zeros((N, M))
+    predecessors = {(i,j):[0,0] for i in range(N) for j in range(M)}
+    
+    for i in range(N):
+        for j in range(M):
+            LD[i, j] = dist(x[i]-y[j])
+
+    AD[0,0] = LD[0,0]
+
+    for i in range(1, N):
+        AD[i,0] = LD[i,0] + AD[i-1,0]
+
+    for i in range(1, M):
+        AD[0,i] = LD[0,i] + AD[0,i-1]
+
+    for i in range(1,N):
+        for j in range(1,M):
+            poss = [AD[i-1, j], AD[i-1, j-1], AD[i, j-1]]
+            predecessors[(i,j)] = [i-1, j] if np.argmin(poss) == 0 else ([i-1, j-1] if np.argmin(poss) == 1 else [i, j-1])
+            AD[i, j] = LD[i, j] + min(AD[i-1,j], AD[i-1, j-1], AD[i, j-1])
+
+    # Backtrack
+    node = (N-1, M-1)
+    path = [[N-1, M-1]]
+    while node != (0,0):
+        path.append(predecessors[node])
+        node = tuple(predecessors[node])
+    path.reverse()
+    path = np.array(path)
+
+    d = AD[N-1, M-1] / (N+M)
+
+    return d, LD, AD, path
+
+
+
+
+
