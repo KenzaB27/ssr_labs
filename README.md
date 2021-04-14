@@ -1,6 +1,3 @@
-# ssr_labs
-Labs of DD2119 Speech and Speaker Recognition @ KTH
-
 # DD2119 Speech and Speaker Recognition course
 Author: *Anna Sánchez Espunyes,  Kenza Bouzid*
 
