@@ -1,6 +1,6 @@
 import numpy as np
 from lab2_tools import *
-
+from tqdm import tqdm
 
 def concatTwoHMMs(hmm1, hmm2):
     """ Concatenates 2 HMM models
@@ -56,7 +56,6 @@ def concatTwoHMMs(hmm1, hmm2):
 
     return hmm
 # this is already implemented, but based on concat2HMMs() above
-
 
 def concatHMMs(hmmmodels, namelist):
     """ Concatenates HMM models in a left to right manner
@@ -119,7 +118,49 @@ def forward(log_emlik, log_startprob, log_transmat):
     Output:
         forward_prob: NxM array of forward log probabilities for each of the M states in the model
     """
+    N, M = log_emlik.shape
+    log_alpha = np.zeros((N, M))
+    # TODO ask if we can just drop the last state
+    log_alpha[0] = log_startprob[:-1] + log_emlik[0]
+    for n in range(1, N):
+        for j in range(M):
+            log_alpha[n, j] = logsumexp(
+                log_alpha[n-1] + log_transmat[:-1, j]) + log_emlik[n, j]
+    
+    return log_alpha 
 
+
+def max_loglikelihood(data, HMMs, speakers="all", func="forward"):
+
+    maxloglik = {}
+    acc = 0
+    for i in tqdm(range(data.shape[0])):
+        key = data[i]['digit'] + "_" + \
+            data[i]["speaker"] + "_" + data[i]["repetition"]
+        for digit in HMMs.keys():
+            obsloglik = log_multivariate_normal_density_diag(
+                data[i]['lmfcc'], HMMs[digit]["means"], HMMs[digit]["covars"])
+            if func=="forward":
+                log_alpha = forward(obsloglik, np.log(
+                    HMMs[digit]['startprob']), np.log(HMMs[digit]['transmat']))
+                loglik = logsumexp(log_alpha[-1])
+            else:
+                # print("HEY")
+                loglik, _ = viterbi(obsloglik, np.log(
+                    HMMs[digit]['startprob']), np.log(HMMs[digit]['transmat']))
+            if not key in maxloglik or maxloglik[key]['loglik'] < loglik:
+                maxloglik[key] = {}
+                maxloglik[key]['loglik'] = loglik
+                maxloglik[key]['digit'] = digit
+        if key[0] == maxloglik[key]['digit']:
+            maxloglik[key]["prediction"] = True
+            acc += 1
+        else:
+            maxloglik[key]["prediction"] = False
+    np.save(f'data/maxloglik_{func}_{speakers}.npy', maxloglik)
+    acc = round(acc * 100 / data.shape[0], 2)
+
+    return acc
 
 def backward(log_emlik, log_startprob, log_transmat):
     """Backward (beta) probabilities in log domain.
@@ -134,7 +175,7 @@ def backward(log_emlik, log_startprob, log_transmat):
     """
 
 
-def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
+def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=False):
     """Viterbi path.
 
     Args:
@@ -148,6 +189,30 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
         viterbi_loglik: log likelihood of the best path
         viterbi_path: best path
     """
+    N, M = log_emlik.shape
+    viterbi_loglik_mat = np.zeros((N, M))
+    B = np.zeros((N, M), dtype=int)
+    # init 
+    viterbi_loglik_mat[0] = log_startprob[:-1] + log_emlik[0]
+    
+    for n in range(1, N):
+        for j in range(M):
+            temp = viterbi_loglik_mat[n-1] + log_transmat[:-1, j]
+            B[n, j] = int(np.argmax(temp))
+            viterbi_loglik_mat[n, j] = temp[B[n, j]] + log_emlik[n, j]
+        
+    finalstate = np.argmax(viterbi_loglik_mat[-1]) if not forceFinalState else 0 # TODO 
+
+    viterbi_path = [finalstate]
+    viterbi_loglik = viterbi_loglik_mat[-1, finalstate]
+    
+    for t in range(N-1, -1, -1):
+        viterbi_path.append(B[t, finalstate])
+        finalstate = B[t, finalstate]
+
+    viterbi_path.reverse()
+
+    return viterbi_loglik, viterbi_path
 
 
 def statePosteriors(log_alpha, log_beta):
