@@ -1,6 +1,8 @@
 import numpy as np
 from lab2_tools import *
 from tqdm import tqdm
+from scipy.stats import multivariate_normal
+import matplotlib.pyplot as plt
 
 def concatTwoHMMs(hmm1, hmm2):
     """ Concatenates 2 HMM models
@@ -40,22 +42,23 @@ def concatTwoHMMs(hmm1, hmm2):
         (hmm1["startprob"][:-1], hmm1["startprob"][-1] * hmm2["startprob"]))
 
     hmm["transmat"] = np.zeros((K+1, K+1))
-    # copying top left corner hmm1 
+    # copying top left corner hmm1
     hmm["transmat"][:M1, :M1] = hmm1["transmat"][:M1, :M1]
     # copying bottom right corner hmm2
     hmm["transmat"][M1:, M1:] = hmm2["transmat"]
-    
+
     last_state_mat = np.tile(
         np.array([hmm1["transmat"][:M1, -1]]).T, (1, M2+1))
     start_prob_rep = np.tile(
-        np.array([hmm2["startprob"]]), (M1,1))
+        np.array([hmm2["startprob"]]), (M1, 1))
     hmm["transmat"][:M1, M1:] = np.multiply(last_state_mat, start_prob_rep)
-    # emission 
+    # emission
     hmm["means"] = np.concatenate((hmm1["means"], hmm2["means"]), axis=0)
     hmm["covars"] = np.concatenate((hmm1["covars"], hmm2["covars"]), axis=0)
 
     return hmm
 # this is already implemented, but based on concat2HMMs() above
+
 
 def concatHMMs(hmmmodels, namelist):
     """ Concatenates HMM models in a left to right manner
@@ -126,8 +129,8 @@ def forward(log_emlik, log_startprob, log_transmat):
         for j in range(M):
             log_alpha[n, j] = logsumexp(
                 log_alpha[n-1] + log_transmat[:-1, j]) + log_emlik[n, j]
-    
-    return log_alpha 
+
+    return log_alpha
 
 
 def max_loglikelihood(data, HMMs, speakers="all", func="forward"):
@@ -140,7 +143,7 @@ def max_loglikelihood(data, HMMs, speakers="all", func="forward"):
         for digit in HMMs.keys():
             obsloglik = log_multivariate_normal_density_diag(
                 data[i]['lmfcc'], HMMs[digit]["means"], HMMs[digit]["covars"])
-            if func=="forward":
+            if func == "forward":
                 log_alpha = forward(obsloglik, np.log(
                     HMMs[digit]['startprob']), np.log(HMMs[digit]['transmat']))
                 loglik = logsumexp(log_alpha[-1])
@@ -162,6 +165,7 @@ def max_loglikelihood(data, HMMs, speakers="all", func="forward"):
 
     return acc
 
+
 def backward(log_emlik, log_startprob, log_transmat):
     """Backward (beta) probabilities in log domain.
 
@@ -173,6 +177,14 @@ def backward(log_emlik, log_startprob, log_transmat):
     Output:
         backward_prob: NxM array of backward log probabilities for each of the M states in the model
     """
+    N, M = log_emlik.shape
+    log_beta = np.zeros((N, M))
+    for n in range(N-2, -1, -1):
+        for i in range(M):
+            # print(i)
+            log_beta[n, i] = logsumexp(
+                log_transmat[i, :-1] + log_emlik[n+1, :] + log_beta[n+1])
+    return log_beta
 
 
 def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=False):
@@ -192,20 +204,21 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=False):
     N, M = log_emlik.shape
     viterbi_loglik_mat = np.zeros((N, M))
     B = np.zeros((N, M), dtype=int)
-    # init 
+    # init
     viterbi_loglik_mat[0] = log_startprob[:-1] + log_emlik[0]
-    
+
     for n in range(1, N):
         for j in range(M):
             temp = viterbi_loglik_mat[n-1] + log_transmat[:-1, j]
             B[n, j] = int(np.argmax(temp))
             viterbi_loglik_mat[n, j] = temp[B[n, j]] + log_emlik[n, j]
-        
-    finalstate = np.argmax(viterbi_loglik_mat[-1]) if not forceFinalState else 0 # TODO 
+
+    finalstate = np.argmax(
+        viterbi_loglik_mat[-1]) if not forceFinalState else 0  # TODO
 
     viterbi_path = [finalstate]
     viterbi_loglik = viterbi_loglik_mat[-1, finalstate]
-    
+
     for t in range(N-1, -1, -1):
         viterbi_path.append(B[t, finalstate])
         finalstate = B[t, finalstate]
@@ -226,6 +239,27 @@ def statePosteriors(log_alpha, log_beta):
     Output:
         log_gamma: NxM array of gamma probabilities for each of the M states in the model
     """
+    N, M = log_alpha.shape
+    log_gamma = np.zeros((N, M))
+    temp = logsumexp(log_alpha[-1])
+    for n in range(N):
+        log_gamma[n] = log_alpha[n] + log_beta[n] - temp
+
+    return log_gamma
+
+
+def statePosteriorsGMM(X, means, covars):
+    N, M = X.shape
+    gammas = np.zeros((N, M))
+    for n, x in enumerate(X): 
+
+        for k in range(M):
+            print(k)
+            gammas[n, k] = multivariate_normal(
+                x, means[k], np.diag(covars[k]), allow_singular=True)
+        gammas[n] /= np.sum(gammas[n])
+
+    return gammas, np.log(gammas)
 
 
 def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
@@ -243,3 +277,55 @@ def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
          means: MxD mean vectors for each state
          covars: MxD covariance (variance) vectors for each state
     """
+    # TODO varainceFloor
+    D = X.shape[1]
+    _, M = log_gamma.shape
+    means = np.zeros((M,D))
+    covars = np.zeros((M, D))
+    gamma = np.exp(log_gamma)
+    for j in range(M):
+        sum_gamma = np.sum(gamma[:, j])
+        means[j] = np.sum(gamma[:, j].reshape(-1, 1) * X, axis=0) / sum_gamma
+        covars[j] = np.sum(gamma[:, j].reshape(-1, 1) * (X - means[j])**2, axis=0) / \
+            sum_gamma
+    covars[covars < varianceFloor] = varianceFloor
+    return means, covars
+
+def EM(hmm, X, maxiters=20, threshold=1.0, plot=False):
+    
+    i = 0
+
+    vloglik, prev_vloglik = 0, float('inf')
+    loglik = []
+
+    while i < maxiters and abs(vloglik - prev_vloglik) > threshold:
+
+        ## Expectation
+        obsloglik = log_multivariate_normal_density_diag(
+            X, hmm["means"], hmm["covars"])
+        log_alpha = forward(obsloglik, np.log(
+            hmm["startprob"]), np.log(hmm["transmat"]))
+        log_beta = backward(obsloglik, np.log(
+            hmm["startprob"]), np.log(hmm["transmat"]))
+        log_gamma = statePosteriors(log_alpha, log_beta)
+        ## Compute log likelihood of data given model
+        prev_vloglik = vloglik
+        vloglik, _ = viterbi(obsloglik, np.log(
+            hmm["startprob"]), np.log(hmm["transmat"]))
+        loglik.append(vloglik)
+        ## Maximization
+        hmm['means'], hmm['covars'] = updateMeanAndVar(X, log_gamma)
+        i += 1
+    print(f"Convergence after {i} epochs towards {loglik[-1]}")
+    if plot:
+        plt.figure()
+        plt.plot(loglik)
+        plt.xlabel("Iterations")
+        plt.ylabel("viterbi log likelihood")
+        plt.title("likelihood vs iteration during EM updates")
+        plt.show()
+    return loglik
+
+
+    
+
