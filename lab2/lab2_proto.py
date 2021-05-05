@@ -1,8 +1,9 @@
 import numpy as np
 from lab2_tools import *
 from tqdm import tqdm
-from scipy.stats import multivariate_normal
+# from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
+
 
 def concatTwoHMMs(hmm1, hmm2):
     """ Concatenates 2 HMM models
@@ -248,18 +249,12 @@ def statePosteriors(log_alpha, log_beta):
     return log_gamma
 
 
-def statePosteriorsGMM(X, means, covars):
-    N, M = X.shape
-    gammas = np.zeros((N, M))
-    for n, x in enumerate(X): 
+def statePosteriorsGMM(log_emlik):
+    denom = logsumexp(log_emlik)
+    
+    gammas = log_emlik - denom
 
-        for k in range(M):
-            print(k)
-            gammas[n, k] = multivariate_normal(
-                x, means[k], np.diag(covars[k]), allow_singular=True)
-        gammas[n] /= np.sum(gammas[n])
-
-    return gammas, np.log(gammas)
+    return gammas
 
 
 def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
