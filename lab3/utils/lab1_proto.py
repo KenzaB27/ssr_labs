@@ -3,7 +3,7 @@ import numpy as np
 
 import scipy.signal as signal
 import scipy.fftpack as fftpack
-from lab1_tools import lifter, trfbank
+from .lab1_tools import lifter, trfbank
 import matplotlib.pyplot as plt
 # Function given by the exercise ----------------------------------
 
