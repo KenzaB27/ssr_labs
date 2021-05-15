@@ -1,6 +1,7 @@
 import numpy as np
 from lab3_tools2 import *
 
+
 def words2phones(wordList, pronDict, addSilence=True, addShortPause=True):
     """ word2phones: converts word level to phone level transcription adding silence
 
@@ -20,8 +21,10 @@ def words2phones(wordList, pronDict, addSilence=True, addShortPause=True):
             phon_symbols.append('sp')
     if addSilence:
         phon_symbols.append('sil')
-        phon_symbols.insert(0,'sil')
+        phon_symbols.insert(0, 'sil')
     return phon_symbols
+
+
 def forcedAlignment(lmfcc, phoneHMMs, phoneTrans):
     """ forcedAlignmen: aligns a phonetic transcription at the state level
 
@@ -36,6 +39,7 @@ def forcedAlignment(lmfcc, phoneHMMs, phoneTrans):
        list of strings in the form phoneme_index specifying, for each time step
        the state from phoneHMMs corresponding to the viterbi path.
     """
+
 
 def hmmLoop(hmmmodels, namelist=None):
     """ Combines HMM models in a loop
@@ -65,6 +69,7 @@ def hmmLoop(hmmmodels, namelist=None):
        wordLoop = hmmLoop(wordHMMs, ['o', 'z', '1', '2', '3'])
     """
 
+
 def acoustic_context(feature, stack_factor=3):
     # (time, coef)
     time_steps = feature.shape[0]
@@ -74,21 +79,21 @@ def acoustic_context(feature, stack_factor=3):
         if i > stack_factor and i < time_steps - stack_factor:
             stacked_features.append(feature[i-stack_factor: i+stack_factor+1])
         elif i == 0:
-            indices = [3,2,1,0,1,2,3]
+            indices = [3, 2, 1, 0, 1, 2, 3]
             stacked_features.append(feature[indices])
         elif i == 1:
-            indices = [2,1,0,1,2,3,4]
+            indices = [2, 1, 0, 1, 2, 3, 4]
             stacked_features.append(feature[indices])
         elif i == 2:
-            indices = [1,0,1,1,2,3,4,5]
+            indices = [1, 0, 1, 2, 3, 4, 5]
             stacked_features.append(feature[indices])
         elif i == l:
-            indices = [l-3,l-2,l-1,l, l-1, l-2, l-3]
+            indices = [l-3, l-2, l-1, l, l-1, l-2, l-3]
             stacked_features.append(feature[indices])
         elif i == l-1:
-            indices = [l-4,l-3,l-2,l-1,l, l-1, l-2]
+            indices = [l-4, l-3, l-2, l-1, l, l-1, l-2]
             stacked_features.append(feature[indices])
         elif i == l-2:
-            indices = [l-5,l-4,l-3,l-2,l-1,l, l-1]
+            indices = [l-5, l-4, l-3, l-2, l-1, l, l-1]
             stacked_features.append(feature[indices])
     return np.array(stacked_features)
