@@ -1,5 +1,5 @@
 import numpy as np
-from lab3_tools import *
+from lab3_tools2 import *
 
 def words2phones(wordList, pronDict, addSilence=True, addShortPause=True):
     """ word2phones: converts word level to phone level transcription adding silence
@@ -72,23 +72,23 @@ def acoustic_context(feature, stack_factor=3):
     stacked_features = []
     for i in range(time_steps):
         if i > stack_factor and i < time_steps - stack_factor:
-            stack_factor.append(feature[i-stack_factor: i+stack_factor+1])
+            stacked_features.append(feature[i-stack_factor: i+stack_factor+1])
         elif i == 0:
             indices = [3,2,1,0,1,2,3]
-            stack_factor.append(feature[indices])
+            stacked_features.append(feature[indices])
         elif i == 1:
             indices = [2,1,0,1,2,3,4]
-            stack_factor.append(feature[indices])
+            stacked_features.append(feature[indices])
         elif i == 2:
             indices = [1,0,1,1,2,3,4,5]
-            stack_factor.append(feature[indices])
+            stacked_features.append(feature[indices])
         elif i == l:
             indices = [l-3,l-2,l-1,l, l-1, l-2, l-3]
-            stack_factor.append(feature[indices])
+            stacked_features.append(feature[indices])
         elif i == l-1:
             indices = [l-4,l-3,l-2,l-1,l, l-1, l-2]
-            stack_factor.append(feature[indices])
+            stacked_features.append(feature[indices])
         elif i == l-2:
             indices = [l-5,l-4,l-3,l-2,l-1,l, l-1]
-            stack_factor.append(feature[indices])
+            stacked_features.append(feature[indices])
     return np.array(stacked_features)
