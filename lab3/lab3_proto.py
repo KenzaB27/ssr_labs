@@ -76,7 +76,7 @@ def acoustic_context(feature, stack_factor=3):
     l = time_steps - 1
     stacked_features = []
     for i in range(time_steps):
-        if i > stack_factor and i < time_steps - stack_factor:
+        if i >= stack_factor and i < time_steps - stack_factor:
             stacked_features.append(feature[i-stack_factor: i+stack_factor+1])
         elif i == 0:
             indices = [3, 2, 1, 0, 1, 2, 3]
