@@ -1,5 +1,7 @@
 import numpy as np
 from lab3_tools2 import *
+import utils.lab2_proto as u2
+import utils.lab2_tools as tools2
 
 
 def words2phones(wordList, pronDict, addSilence=True, addShortPause=True):
@@ -39,6 +41,19 @@ def forcedAlignment(lmfcc, phoneHMMs, phoneTrans):
        list of strings in the form phoneme_index specifying, for each time step
        the state from phoneHMMs corresponding to the viterbi path.
     """
+    utteranceHMM = u2.concatHMMs(phoneHMMs, phoneTrans)
+    log_emlik = tools2.log_multivariate_normal_density_diag(
+        lmfcc, utteranceHMM['means'], utteranceHMM['covars'])
+    vi_loglik, vi_path = u2.viterbi(log_emlik, np.log(
+        utteranceHMM['startprob']), np.log(utteranceHMM['transmat']))
+
+    phones = sorted(phoneHMMs.keys())
+    nstates = {phone: phoneHMMs[phone]['means'].shape[0] for phone in phones}
+    
+    stateTrans = [phone + '_' + str(stateid)
+                  for phone in phoneTrans for stateid in range(nstates[phone])]
+    vi_state_trans = [stateTrans[state] for state in vi_path]
+    return vi_state_trans
 
 
 def hmmLoop(hmmmodels, namelist=None):
