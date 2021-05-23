@@ -45,7 +45,7 @@ def forcedAlignment(lmfcc, phoneHMMs, phoneTrans):
     log_emlik = tools2.log_multivariate_normal_density_diag(
         lmfcc, utteranceHMM['means'], utteranceHMM['covars'])
     vi_loglik, vi_path = u2.viterbi(log_emlik, np.log(
-        utteranceHMM['startprob'][:-1]), np.log(utteranceHMM['transmat'][:-1,:-1]))
+        utteranceHMM['startprob']), np.log(utteranceHMM['transmat']))
 
     phones = sorted(phoneHMMs.keys())
     nstates = {phone: phoneHMMs[phone]['means'].shape[0] for phone in phones}
