@@ -150,7 +150,7 @@ def max_loglikelihood(data, HMMs, speakers="all", func="forward"):
                 loglik = logsumexp(log_alpha[-1])
             else:
                 # print("HEY")
-                loglik, _ = 
+                loglik, _ = viterbi
                 (obsloglik, np.log(
                     HMMs[digit]['startprob']), np.log(HMMs[digit]['transmat']))
             if not key in maxloglik or maxloglik[key]['loglik'] < loglik:
