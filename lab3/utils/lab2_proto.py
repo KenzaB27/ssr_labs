@@ -221,11 +221,20 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=False):
     viterbi_path = [finalstate]
     viterbi_loglik = viterbi_loglik_mat[-1, finalstate]
 
-    for t in range(N-1, -1, -1):
-        viterbi_path.append(B[t, finalstate])
-        finalstate = B[t, finalstate]
+    # for t in range(N-1, -1, -1):
+    #     viterbi_path.append(B[t, finalstate])
+    #     finalstate = B[t, finalstate]
 
-    viterbi_path.reverse()
+    # viterbi_path.reverse()
+
+    viterbi_path[-1] = np.argmax(viterbi_loglik_mat[-1, :])
+    viterbi_loglik = viterbi_loglik_mat[N-1, viterbi_path[-1]]
+    for n in range(0,N-1):
+        viterbi_path[n] += np.max(viterbi_loglik_mat[n-1, :])
+    
+    for n in reversed(range(N-1)):
+        for j in range(M):
+            viterbi_path[n] = B[n+1, viterbi_path[n+1]]
 
     return viterbi_loglik, viterbi_path
 
